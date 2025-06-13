@@ -1,0 +1,641 @@
+   ,import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { 
+  Search, 
+  FileText, 
+  Image, 
+  Calendar, 
+  Download, 
+  Eye, 
+  Share2, 
+  Filter,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  AlertCircle
+} from "lucide-react";
+
+const SearchResources = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filters, setFilters] = useState({
+    subject: "",
+    semester: "",
+    university: "",
+    resourceType: "",
+    sortBy: "recent"
+  });
+  const [files, setFiles] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pages: 0,
+    total: 0,
+    hasNext: false,
+    hasPrev: false
+  });
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  // Debounced search
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchQuery.length >= 2) {
+        fetchSuggestions();
+      } else {
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  // Fetch search results when query or filters change
+  useEffect(() => {
+    handleSearch(1);
+  }, [filters]);
+
+  const fetchSuggestions = async () => {
+    try {
+      const response = await fetch(/api/search/suggestions?query=${encodeURIComponent(searchQuery)}, {
+        headers: {
+          'Authorization': Bearer ${localStorage.getItem('token')}
+        }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSuggestions(data.data);
+        setShowSuggestions(data.data.length > 0);
+      }
+    } catch (error) {
+      console.error('Error fetching suggestions:', error);
+    }
+  };
+
+  const handleSearch = async (page = 1) => {
+    setLoading(true);
+    setError("");
+    
+    try {
+      const queryParams = new URLSearchParams({
+        query: searchQuery,
+        page: page.toString(),
+        limit: "12",
+        excludeOwn: "true", // Exclude user's own files
+        ...filters
+      });
+
+      const response = await fetch(/api/search?${queryParams}, {
+        headers: {
+          'Authorization': Bearer ${localStorage.getItem('token')}
+        }
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setFiles(data.data.files);
+        setPagination(data.data.pagination);
+      } else {
+        setError(data.message || 'Search failed');
+      }
+    } catch (error) {
+      setError('Network error occurred');
+      console.error('Search error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileClick = async (fileId) => {
+    try {
+      const response = await fetch(/api/search/file/${fileId}, {
+        headers: {
+          'Authorization': Bearer ${localStorage.getItem('token')}
+        }
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setSelectedFile(data.data);
+        setModalOpen(true);
+      }
+    } catch (error) {
+      console.error('Error fetching file details:', error);
+    }
+  };
+
+  const handleDownload = async (fileId, filename) => {
+    try {
+      const response = await fetch(/api/search/download/${fileId}, {
+        method: 'POST',
+        headers: {
+          'Authorization': Bearer ${localStorage.getItem('token')}
+        }
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        // Create download link
+        const link = document.createElement('a');
+        link.href = data.data.downloadUrl;
+        link.download = filename;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (error) {
+      console.error('Download error:', error);
+    }
+  };
+
+  const handleShare = async (file) => {
+    const shareData = {
+      title: file.title,
+      text: file.description,
+      url: window.location.origin + /file/${file._id}
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        // Fallback: copy to clipboard
+        await navigator.clipboard.writeText(shareData.url);
+        alert('Link copied to clipboard!');
+      }
+    } catch (error) {
+      console.error('Share error:', error);
+    }
+  };
+
+  const getIcon = (resourceType) => {
+    return resourceType === "image" ? Image : FileText;
+  };
+
+  const getTypeColor = (resourceType) => {
+    return resourceType === "image" 
+      ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+      : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300";
+  };
+
+  const formatFileSize = (bytes) => {
+    if (!bytes) return 'Unknown';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let size = bytes;
+    let unitIndex = 0;
+    
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024;
+      unitIndex++;
+    }
+    
+    return ${size.toFixed(1)} ${units[unitIndex]};
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
+      <div className="pt-20 pb-16 px-6">
+        <div className="max-w-6xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <Search className="h-8 w-8 text-purple-600" />
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Search Resources</h1>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Discover and access educational materials shared by the community
+                </p>
+              </div>
+            </div>
+
+            {/* Search Bar with Suggestions */}
+            <div className="relative mb-6">
+              <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+              <Input
+                placeholder="Search by title, subject, tags..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSearch(1)}
+                className="pl-10 h-12 text-lg"
+                onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+              />
+              
+              {/* Search Suggestions */}
+              <AnimatePresence>
+                {showSuggestions && suggestions.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="absolute top-full left-0 right-0 bg-white dark:bg-gray-800 border rounded-lg shadow-lg z-10 mt-1"
+                  >
+                    {suggestions.map((suggestion, index) => (
+                      <div
+                        key={index}
+                        className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                        onClick={() => {
+                          setSearchQuery(suggestion);
+                          setShowSuggestions(false);
+                          handleSearch(1);
+                        }}
+                      >
+                        {suggestion}
+                      </div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Filters */}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+              <Select value={filters.subject} onValueChange={(value) => setFilters({...filters, subject: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Subject" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Subjects</SelectItem>
+                  <SelectItem value="mathematics">Mathematics</SelectItem>
+                  <SelectItem value="physics">Physics</SelectItem>
+                  <SelectItem value="chemistry">Chemistry</SelectItem>
+                  <SelectItem value="computer science">Computer Science</SelectItem>
+                  <SelectItem value="engineering">Engineering</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={filters.semester} onValueChange={(value) => setFilters({...filters, semester: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Semester" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Semesters</SelectItem>
+                  {[1,2,3,4,5,6,7,8].map(sem => (
+                    <SelectItem key={sem} value={sem.toString()}>Semester {sem}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={filters.resourceType} onValueChange={(value) => setFilters({...filters, resourceType: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Types</SelectItem>
+                  <SelectItem value="raw">Documents</SelectItem>
+                  <SelectItem value="image">Images</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={filters.sortBy} onValueChange={(value) => setFilters({...filters, sortBy: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="recent">Most Recent</SelectItem>
+                  <SelectItem value="popular">Most Viewed</SelectItem>
+                  <SelectItem value="downloads">Most Downloaded</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Button onClick={() => handleSearch(1)} className="w-full">
+                <Search className="w-4 h-4 mr-2" />
+                Search
+              </Button>
+            </div>
+          </motion.div>
+
+          {/* Error Display */}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700"
+            >
+              <AlertCircle className="h-5 w-5" />
+              {error}
+            </motion.div>
+          )}
+
+          {/* Loading State */}
+          {loading && (
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+              <span className="ml-2">Searching...</span>
+            </div>
+          )}
+
+          {/* Results */}
+          {!loading && (
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-gray-600 dark:text-gray-400">
+                  {pagination.total} result{pagination.total !== 1 ? "s" : ""} found
+                  {searchQuery &&  for "${searchQuery}"}
+                </p>
+              </div>
+
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ staggerChildren: 0.1 }}
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
+              >
+                {files.map((file) => {
+                  const IconComponent = getIcon(file.resourceType);
+                  return (
+                    <motion.div
+                      key={file._id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      whileHover={{ y: -4 }}
+                      className="group cursor-pointer"
+                      onClick={() => handleFileClick(file._id)}
+                    >
+                      <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+                        <CardContent className="p-6">
+                          <div className="flex items-start gap-4 mb-4">
+                            <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                              <IconComponent className="h-6 w-6 text-white" />
+                            </div>
+                            
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
+                                  {file.title}
+                                </h3>
+                                <Badge className={getTypeColor(file.resourceType)}>
+                                  {file.resourceType === 'image' ? 'IMG' : 'DOC'}
+                                </Badge>
+                              </div>
+                              
+                              {file.description && (
+                                <p className="text-gray-600 dark:text-gray-400 text-sm mb-3 line-clamp-2">
+                                  {file.description}
+                                </p>
+                              )}
+                              
+                              <div className="flex flex-wrap gap-1 mb-3">
+                                {file.tags?.slice(0, 3).map((tag) => (
+                                  <Badge key={tag} variant="secondary" className="text-xs">
+                                    {tag}
+                                  </Badge>
+                                ))}
+                                {file.tags?.length > 3 && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    +{file.tags.length - 3}
+                                  </Badge>
+                                )}
+                              </div>
+                              
+                              <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  {new Date(file.createdAt).toLocaleDateString()}
+                                </div>
+                                <span>•</span>
+                                <span>{file.subject}</span>
+                                <span>•</span>
+                                <span>{file.views || 0} views</span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <div className="text-xs text-gray-500">
+                              {file.semester && Sem ${file.semester}}
+                              {file.university &&  • ${file.university}}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleFileClick(file._id);
+                                }}
+                              >
+                                <Eye className="h-3 w-3 mr-1" />
+                                View
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  );
+                })}
+              </motion.div>
+
+              {/* Empty State */}
+              {files.length === 0 && !loading && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-center py-12"
+                >
+                  <Search className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                    No results found
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Try adjusting your search query or filters
+                  </p>
+                </motion.div>
+              )}
+
+              {/* Pagination */}
+              {pagination.pages > 1 && (
+                <div className="flex items-center justify-center gap-2 mt-8">
+                  <Button
+                    variant="outline"
+                    onClick={() => handleSearch(pagination.current - 1)}
+                    disabled={!pagination.hasPrev}
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    Previous
+                  </Button>
+                  
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
+                      const pageNum = Math.max(1, pagination.current - 2) + i;
+                      if (pageNum > pagination.pages) return null;
+                      
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={pageNum === pagination.current ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handleSearch(pageNum)}
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  
+                  <Button
+                    variant="outline"
+                    onClick={() => handleSearch(pagination.current + 1)}
+                    disabled={!pagination.hasNext}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* File Details Modal */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          {selectedFile && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-3">
+                  {selectedFile.resourceType === 'image' ? (
+                    <Image className="h-6 w-6 text-blue-600" />
+                  ) : (
+                    <FileText className="h-6 w-6 text-red-600" />
+                  )}
+                  {selectedFile.title}
+                </DialogTitle>
+                <DialogDescription>
+                  Uploaded by Anonymous • {selectedFile.views || 0} views • {selectedFile.downloads || 0} downloads
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                {/* File Preview */}
+                {selectedFile.resourceType === 'image' && (
+                  <div className="border rounded-lg overflow-hidden">
+                    <img
+                      src={selectedFile.cloudinaryUrl}
+                      alt={selectedFile.title}
+                      className="w-full h-64 object-contain bg-gray-50"
+                    />
+                  </div>
+                )}
+
+                {/* File Details */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-semibold text-sm text-gray-600 mb-1">Subject</h4>
+                    <p className="text-sm">{selectedFile.subject}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-sm text-gray-600 mb-1">Semester</h4>
+                    <p className="text-sm">{selectedFile.semester || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-sm text-gray-600 mb-1">University</h4>
+                    <p className="text-sm">{selectedFile.university || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-sm text-gray-600 mb-1">Upload Date</h4>
+                    <p className="text-sm">{new Date(selectedFile.createdAt).toLocaleDateString()}</p>
+                  </div>
+                </div>
+
+                {/* Description */}
+                {selectedFile.description && (
+                  <div>
+                    <h4 className="font-semibold text-sm text-gray-600 mb-2">Description</h4>
+                    <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">
+                      {selectedFile.description}
+                    </p>
+                  </div>
+                )}
+
+                {/* Tags */}
+                {selectedFile.tags && selectedFile.tags.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold text-sm text-gray-600 mb-2">Tags</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedFile.tags.map((tag) => (
+                        <Badge key={tag} variant="secondary">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Summary */}
+                {selectedFile.summary && (
+                  <div>
+                    <h4 className="font-semibold text-sm text-gray-600 mb-2">AI Summary</h4>
+                    <p className="text-sm text-gray-700 bg-blue-50 p-3 rounded-lg border-l-4 border-blue-400">
+                      {selectedFile.summary}
+                    </p>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex items-center gap-3 pt-4 border-t">
+                  <Button
+                    onClick={() => handleDownload(selectedFile._id, selectedFile.title)}
+                    className="flex-1"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    onClick={() => handleShare(selectedFile)}
+                    className="flex-1"
+                  >
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Share
+                  </Button>
+                  
+                  {selectedFile.resourceType === 'raw' && (
+                    <Button
+                      variant="outline"
+                      onClick={() => window.open(selectedFile.cloudinaryUrl, '_blank')}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      View Online
+                    </Button>
+                  )}
+                </div>
+
+                {/* Stats */}
+                <div className="flex items-center justify-center gap-6 text-sm text-gray-500 pt-2 border-t">
+                  <div className="flex items-center gap-1">
+                    <Eye className="h-4 w-4" />
+                    {selectedFile.views || 0} views
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Download className="h-4 w-4" />
+                    {selectedFile.downloads || 0} downloads
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default SearchResources;
