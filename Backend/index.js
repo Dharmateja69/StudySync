@@ -3,7 +3,6 @@ import cookieParser from 'cookie-parser'; // Import cookie-parser
 import cors from 'cors';
 import { config } from 'dotenv';
 import express, { urlencoded } from 'express';
-
 import session from 'express-session';
 
 import connectDB from './config/db.js';
