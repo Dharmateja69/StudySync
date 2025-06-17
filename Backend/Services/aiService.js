@@ -1,4 +1,4 @@
-// /services/aiService.js
+// /Services/aiService.js
 
 
 import extractTextFromImage from '../utility/imageExtractor.js';

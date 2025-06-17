@@ -6,7 +6,7 @@
 import asyncHandler from '../middlewares/Asynchandler.js';
 import AISummary from '../Model/AISummarySchema.js';
 import AiFile from '../Model/UploadFileforai.js';
-import generateSummary from '../services/aiService.js';
+import generateSummary from '../Services/aiService.js';
 import { updateOnAISummary } from '../Services/dashboardService.js';
 import imageExtractor from '../utility/imageExtractor.js';
 import pdfExtractor from '../utility/pdfExtractor.js';
