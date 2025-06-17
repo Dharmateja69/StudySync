@@ -19,10 +19,10 @@ const app = express();
 
 // Middleware
 app.use(cors({
-    origin: "http://localhost:8080",  // frontend origin, not '*'
+    origin: "https://studysync-frontend-4e14.onrender.com",  // frontend origin, not '*'
     credentials: true,                 // allow cookies and credentials
 }));
-//https://studysync-frontend-4e14.onrender.com
+//
 app.use(express.json()); // Accept JSON
 app.use(urlencoded({ extended: true })); // Handle form data
 app.use(cookieParser()); // **CRUCIAL: Parse cookies before routes**
