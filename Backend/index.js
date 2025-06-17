@@ -1,14 +1,15 @@
 import 'colors';
 import cookieParser from 'cookie-parser'; // Import cookie-parser
 import cors from 'cors';
-import { config } from 'dotenv';
+import dotenv from 'dotenv';
 import express, { urlencoded } from 'express';
 import session from 'express-session';
+// Load .env variables
 
 import connectDB from './config/db.js';
 
 // Load env variables
-config();
+dotenv.config();
 
 // Connect to MongoDB
 connectDB();
@@ -21,6 +22,7 @@ app.use(cors({
     origin: "http://localhost:8080",  // frontend origin, not '*'
     credentials: true,                 // allow cookies and credentials
 }));
+//https://studysync-frontend-4e14.onrender.com
 app.use(express.json()); // Accept JSON
 app.use(urlencoded({ extended: true })); // Handle form data
 app.use(cookieParser()); // **CRUCIAL: Parse cookies before routes**

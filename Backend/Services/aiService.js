@@ -1,16 +1,18 @@
 // /Services/aiService.js
 
 
+import dotenv from 'dotenv';
 import extractTextFromImage from '../utility/imageExtractor.js';
 import extractTextFromPDF from '../utility/pdfExtractor.js';
 import extractTextFromURL from '../utility/urlExtractor.js';
 
-import openRouter from '../config/openrouter.config.js';
+
+import openRouterClient from '../config/openrouter.config.js';
 import buildPrompt from '../helper/buildPrompt.js';
 import calculateReasoningTokens from '../helper/tokenCalculator.js';
 import AISummary from '../Model/AISummarySchema.js';
 import buildCodePrompt from '../Prompt/CodingPrompt.js';
-
+dotenv.config();
 const generateSummary = async ({
     fileBuffer,
     sourceType,
@@ -50,12 +52,14 @@ const generateSummary = async ({
         const maxTokens = calculateReasoningTokens(safeText, options.contentType);
 
         // Step 4: Call the AI model via OpenRouter API
-        const aiResponse = await openRouter.post('/chat/completions', {
-            model: "openai/gpt-3.5-turbo",
+        const aiResponse = await openRouterClient.post('/chat/completions', {
+            model: "anthropic/claude-3-haiku",
             messages: [{ role: "user", content: prompt }],
             temperature: 0.3,
             max_tokens: maxTokens,
         });
+
+
 
         // 🪵 Debug AI response
         console.log("🧠 OpenRouter AI Response:", JSON.stringify(aiResponse.data, null, 2));
@@ -104,9 +108,12 @@ const generateSummary = async ({
         }
 
 
+
         return saved;
     } catch (error) {
         console.error('[❌ AI Summary Error]', error.message);
+        console.error(error.stack);
+
         throw new Error('AI summarization failed');
     }
 };
