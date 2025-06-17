@@ -70,6 +70,11 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/search', searchRoutes);
 app.use("/api/leaderboard", LeaderBoardRoutes);
 
+// Health check route for Render
+app.get('/healthz', (req, res) => {
+    res.status(200).json({ status: 'ok', message: 'Backend is healthy!' });
+});
+
 // Middleware for 404 not found
 import notFound from './middlewares/notFound.js';
 app.use(notFound);
