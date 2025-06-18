@@ -54,6 +54,7 @@ export const googleAuth = passport.authenticate('google', {
     scope: ['profile', 'email'],
     accessType: 'offline',
     prompt: 'consent'
+
 });
 
 export const googleCallback = asyncHandler(async (req, res, next) => {
@@ -61,6 +62,8 @@ export const googleCallback = asyncHandler(async (req, res, next) => {
         if (err || !user) {
             return res.redirect(`${process.env.CLIENT_URL}/login?error=auth_failed`);
         }
+
+
 
         generateToken(res, user._id);
         initializeUser(user._id);
