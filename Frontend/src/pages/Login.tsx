@@ -119,7 +119,7 @@ const Login = () => {
   const handlegooglesignup = () => {
     console.log("Google signup initiated");
     window.location.href =
-      "https://studysync-backend-9obr.onrender.com//api/auth/google";
+      "https://studysync-backend-9obr.onrender.com/api/auth/google";
   };
 
   return (

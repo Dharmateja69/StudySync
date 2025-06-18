@@ -15,6 +15,10 @@ import extractTextFromURL from '../utility/urlExtractor.js';
 
 
 export const uploadSummary = asyncHandler(async (req, res) => {
+    console.log('file:', req.file);
+    console.log('userId:', req.user?._id);
+    console.log('taskType:', req.body.taskType);
+
     try {
         const {
             taskType,              // NEW: 'summary' or 'coding'
@@ -269,7 +273,7 @@ export const publicUrlSummary = asyncHandler(async (req, res) => {
 
     } catch (error) {
         console.error('publicUrlSummary error:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
+        res.status(500).json({ error: 'Internal Server Error ' });
     }
 });
 // GET /api/summary/:id
