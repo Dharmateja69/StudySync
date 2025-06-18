@@ -59,7 +59,7 @@ export const googleAuth = passport.authenticate('google', {
 export const googleCallback = asyncHandler(async (req, res, next) => {
     passport.authenticate('google', { session: false }, (err, user) => {
         if (err || !user) {
-            return res.redirect(`${process.env.CLIENT_URL}/*`);
+            return res.redirect(`${process.env.CLIENT_URL}/login?error=auth_failed`);
         }
 
         generateToken(res, user._id);

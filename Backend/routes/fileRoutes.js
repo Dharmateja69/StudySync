@@ -10,10 +10,11 @@ import { uploadSingleFile } from "../middlewares/fileUploadMiddleware.js";
 const router = express.Router();
 
 router.post("/upload", protect, uploadSingleFile, uploadFileController);
+router.get("/user/uploads", protect, getUserUploads);
 router.get("/:id", protect, getFileById);
 router.put("/:id", protect, updateFile);
 router.delete("/:id", protect, deleteFile);
-router.get("/user/uploads", protect, getUserUploads);
+
 
 
 export default router;

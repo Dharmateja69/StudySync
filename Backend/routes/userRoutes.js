@@ -2,10 +2,10 @@
 
 import express from "express";
 import {
-    updateProfile,
     changePassword,
     deleteMe,
     getRole,
+    updateProfile,
 } from "../Controller/userController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
