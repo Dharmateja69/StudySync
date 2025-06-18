@@ -8,8 +8,7 @@ passport.use(new GoogleStrategy({
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: process.env.GOOGLE_CALLBACK_URL,
     passReqToCallback: true,
-    scope: ['profile', 'email'],
-    accessType: 'offline'
+
 }, async (req, accessToken, refreshToken, profile, done) => {
     try {
         // Extract user info directly from profile

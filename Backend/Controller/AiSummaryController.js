@@ -15,9 +15,6 @@ import extractTextFromURL from '../utility/urlExtractor.js';
 
 
 export const uploadSummary = asyncHandler(async (req, res) => {
-    console.log('file:', req.file);
-    console.log('userId:', req.user?._id);
-    console.log('taskType:', req.body.taskType);
 
     try {
         const {
