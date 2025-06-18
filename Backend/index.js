@@ -23,10 +23,16 @@ const app = express();
 // === MIDDLEWARE ===
 
 // Enable CORS with frontend origin
+// Enable CORS with all necessary options
 app.use(cors({
     origin: "https://studysync-frontend-4e14.onrender.com",
-    credentials: true, // ✅ Required to send cookies
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // ✅ Add allowed methods
+    allowedHeaders: ["Content-Type", "Authorization"],     // ✅ Add allowed headers
 }));
+
+// ✅ Explicitly handle preflight requests
+
 
 // Accept JSON and form data
 app.use(express.json());
