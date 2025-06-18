@@ -53,7 +53,7 @@ const generateSummary = async ({
 
         // Step 4: Call the AI model via OpenRouter API
         const aiResponse = await openRouterClient.post('/chat/completions', {
-            model: "anthropic/claude-sonnet-4",
+            model: "anthropic/claude-3-haiku",
             messages: [{ role: "user", content: prompt }],
             temperature: 0.3,
             max_tokens: maxTokens,
